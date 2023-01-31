@@ -1,0 +1,268 @@
+library(tidyverse)
+library(ggplot2)
+#read_csv() reads comma delimited files read_csv function imports data into R as a tibble, while read. csv imports a regular old R data frame instead.
+Players_stats <- read_csv("Stats.csv")
+View(Players_stats)#opens the data frame in a new tab
+
+Players_stats_2 <- read_csv("Stats3.csv")
+View(Players_stats_2)
+
+#removing the duplicate data regarding the same players
+Stats1_clean <- Players_stats[!duplicated(Players_stats$`Player Name`), ]
+
+Stats2_clean <- Players_stats_2[!duplicated(Players_stats_2$Player), ]
+View(Stats2_clean)
+#naming the columns
+colnames(Stats1_clean)
+
+make.names(names(Stats2_clean))#Makes syntactically valid names out of character vectors
+
+
+colnames(Stats1_clean) <- c("Player.Name","Accurate.Long.Balls","Aerial.Battles.Lost","Aerial.Battles.Won","Appearances","Assists","Attack","Big.Chances.Created","Big.Chances.Missed","Blocked.Shots","Catches","Clean.Sheets","Clearances","Clearances.Off.Line","Club","Cross.Accuracy.prc","Crosses","Defence","Discipline","Duels.Lost","Duels.Won","Errors.Leading.To.Goal","Fouls","Goal.Kicks","Goalkeeping","Goals","Goals.Conceded","Goals.From.Freekick","Goals.Per.Match","Goals.With.Header","Goals.With.Left.Foot","Goals.With.Right.Foot","Headed.Clearance","High.Claims","Hit.Woodwork","Interceptions","Last.Man.Tackles","Losses","Offsides","Own.Goals","Passes","Passes.Per.Match","Penalties.Saved","Penalties.Scored","Position","Punches","Recoveries","Red.Cards","Saves","Shooting.Accuracy.prc","Shots","Shots.On.Target","Successful.Challenges","Sweeper.Clearances", "Tackle.Success.prc","Tackles","Team.Play","Through.Balls","Throw.Outs","Wins","Yellow.Cards")
+
+colnames(Stats2_clean) <- c("League","Team","Season","KEY","Player","Position","Appearences","Goals","Started","Started.As.A.Sub","Came.On","Taken.Off","Own.Goals","Type.Of.Goal","First.Half","Second.Half","First.Scorer","Last.Scorer","Home","Away","Right.Foot","Left.Foot","Header","Other.Method","Open.Play","Cross","Free.Kick", "Direct.Free.Kick","Throw.In", "Penalty","Corner","Other.Type.Of.Play","Minutes.played","Min.goal","Assists", "Prc.Assists","Leading.Recipient","Recipient.Goals","CS","Prc.Clean.Sheets","Hat.Tricks","Yellow.Cards","Yellow.First.Half","Yellow.Second.Half","Yellow.Home","Yellow.Away","Yellow.Minutes.Played","Minutes.per.Yellow.Cards","Sent.Off","Straight.Red.Card","Two.Yellow.Cards","Red.First.Half","Red.Second.Half","Red.Home","Red.Away","Red.Minutes.Played","Minutes.per.Red.Cards")
+
+Stats2_clean$Yellow.Cards <- as.integer(Stats2_clean$Yellow.Cards)#storing yellow cards 
+
+
+
+Stats1_clean[238,1] <- "Marc Albrighton"
+View(Stats1_clean) #checking if we can append new data in the data frame
+
+Team_Defense_2017_18 <- read_csv("Team Defense 2017-18.csv")
+#%>% is forward pipe operator used for chaining multiple data type
+PL_Defense_stats <- Team_Defense_2017_18 %>% filter(League=="Premier League")
+
+colnames(PL_Defense_stats) <- c("League","Goals.Against","Team","GA.Home","GA.Away","GA.First.Half","GA.Second.Half","GA.First.15.mins","GA.Last.10.mins","GA.Home.Matches.Scored.In","GA.Away.Matches.Scored.In","GA.Pld","GA.Per.Match","Season","KEY")
+
+View(PL_Defense_stats)
+
+barplot(height = PL_Defense_stats$Goals.Against,names.arg = PL_Defense_stats$Team,main = "Amount Of Goals conceded by each team",ylab = "Goals Conceded",las=2)
+
+barplot(height = PL_Defense_stats$GA.Per.Match,names.arg = PL_Defense_stats$Team,main = "Goals Against Per Match",ylab = "GA Per Match",las=2)
+
+barplot(height = PL_Defense_stats$GA.Last.10.mins,names.arg = PL_Defense_stats$Team,main = "Goals Conceded in the last 10 minutes",ylab = "Goals Conceded",las=2)
+
+barplot(height = PL_Defense_stats$GA.First.Half,names.arg = PL_Defense_stats$Team,main = "Goals Conceded in the first half",ylab = "Goals Conceded",las=2)
+
+barplot(height = PL_Defense_stats$GA.Home,names.arg = PL_Defense_stats$Team,main = "Goals Conceded at Home",ylab = "Goals Conceded",las=2)
+
+barplot(height = PL_Defense_stats$GA.Away,names.arg = PL_Defense_stats$Team,main = "Goals Conceded away from Home",ylab = "Goals Conceded",las=2)
+
+#goalkeeper dataframe
+goalkeeper_df <- Stats2_clean %>% 
+  filter(Position=="Goalkeeper") %>% 
+  group_by(Team) %>% 
+  drop_na(CS) %>% 
+  summarize(total_CS = sum(CS))
+
+View(goalkeeper_df)
+#plotting goal keeper values
+barplot(height = goalkeeper_df$total_CS,names.arg = goalkeeper_df$Team,main = "Clean sheets Kept",ylab = "Clean Sheets Kept",las=2)
+
+#
+discipline_df <- Stats2_clean %>% 
+  filter(Position=="Defender") %>% 
+  group_by(Team) %>%
+  drop_na(Yellow.Cards) %>%
+  summarise(total_yellows = sum(Yellow.Cards))
+
+View(discipline_df)
+
+str(Stats2_clean)
+#yellow and red card plots
+
+discipline_df2 <- Stats2_clean %>% 
+  filter(Position=="Defender") %>% 
+  group_by(Team) %>%
+  drop_na(Sent.Off) %>%
+  summarise(total_reds = sum(Sent.Off))
+
+barplot(height = discipline_df$total_yellows,names.arg = discipline_df$Team,main = "Yellow Cards Received",ylab = "Cards",las=2,col = "yellow",ylim = c(0,35))
+
+barplot(height = discipline_df2$total_reds,col = "red",names.arg = discipline_df2$Team,main = "Red Cards Received",ylab = "Cards",las=2,ylim = c(0,5))
+
+goalkeeper_df <- Stats1_clean %>% 
+  filter(Position=="Goalkeeper")  
+#goalkeeper ranking formula
+gks_scored <- mutate(goalkeeper_df, ovr_score = 0 - (1*Errors.Leading.To.Goal) + (2.5*Assists) - (3*Red.Cards) + (3*Penalties.Saved) - (0.9*Fouls) + (0.2*Appearances) - (1*Own.Goals) + (0.8*Blocked.Shots) - (1*Goals.Conceded) + (2.5*Accurate.Long.Balls) + (2*Saves)) 
+
+top_10_gks <- head(gks_scored[order(-gks_scored$ovr_score),],n=10)
+
+gk_plt <- top_10_gks %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Top 10 Goalkeepers of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+gk_plt + theme(axis.text.x = element_blank(),
+               axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+
+defender_df <- Stats1_clean %>% 
+  filter(Position=="Defender")  
+#defender formula
+def_scored <- mutate(defender_df, ovr_score = 0 + (1.5*Goals) - (2*Errors.Leading.To.Goal) + (0.9*Shots.On.Target) + (1*Assists) + (0.5*Tackles) - (2*Red.Cards) - (0.9*Fouls) + (0.8*Goals.With.Header) - (0.8*Own.Goals) + (0.8*Blocked.Shots) + (0.5*Passes.Per.Match)) 
+
+top_10_def <- head(def_scored[order(-def_scored$ovr_score),],n=10)
+
+def_plt <- top_10_def %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Top 10 Defenders of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+def_plt + theme(axis.text.x = element_blank(),
+                axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+#best midfielders
+mid_df <- Stats1_clean %>% 
+  filter(Position=="Midfielder")  
+#midfielder formula
+mid_scored <- mutate(mid_df, ovr_score = 0 + (0.5*Shooting.Accuracy.prc) + (0.8*Goals) + (0.9*Shots.On.Target) + (0.9*Assists) + (0.9*Tackle.Success.prc) - (1*Red.Cards) + (0.8*Penalties.Scored) - (0.9*Fouls) + (0.5*Goals.With.Header) - (0.8*Own.Goals) + (0.5*Goals.From.Freekick) + (1.0*Passes.Per.Match))
+
+
+top_10_mid <- head(mid_scored[order(-mid_scored$ovr_score),],n=10)
+
+mid_plt <- top_10_mid %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Top 10 Midfielders of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+mid_plt + theme(axis.text.x = element_blank(),
+                axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+#best attackers
+
+att_df <- Stats1_clean %>% 
+  filter(Position=="Forward")  
+
+att_df[is.na(att_df)] <- 0
+#best forward formula
+att_scored <- mutate(att_df, ovr_score = 0 + (0.8*Shooting.Accuracy.prc) + (1*Goals) + (0.9*Shots.On.Target) + (0.5*Assists) + (0.5*Tackle.Success.prc) - (1*Red.Cards) + (0.8*Penalties.Scored) - (0.9*Fouls) + (0.8*Goals.With.Header) - (0.8*Own.Goals) + (0.8*Goals.From.Freekick) + (0.5*Passes.Per.Match) + (0.8*Cross.Accuracy.prc))
+
+top_10_att <- head(att_scored[order(-att_scored$ovr_score),],n=10)
+
+
+str(top_10_att)
+
+att_plt <- top_10_att %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Top 10 Forwards of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+
+att_plt + theme(axis.text.x = element_blank(),
+                axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+
+
+
+
+colnames(Stats1_clean)
+
+make.names(names(Stats2_clean))
+
+
+colnames(Stats1_clean) <- c("Player.Name","Accurate.Long.Balls","Aerial.Battles.Lost","Aerial.Battles.Won","Appearances","Assists","Attack","Big.Chances.Created","Big.Chances.Missed","Blocked.Shots","Catches","Clean.Sheets","Clearances","Clearances.Off.Line","Club","Cross.Accuracy.prc","Crosses","Defence","Discipline","Duels.Lost","Duels.Won","Errors.Leading.To.Goal","Fouls","Goal.Kicks","Goalkeeping","Goals","Goals.Conceded","Goals.From.Freekick","Goals.Per.Match","Goals.With.Header","Goals.With.Left.Foot","Goals.With.Right.Foot","Headed.Clearance","High.Claims","Hit.Woodwork","Interceptions","Last.Man.Tackles","Losses","Offsides","Own.Goals","Passes","Passes.Per.Match","Penalties.Saved","Penalties.Scored","Position","Punches","Recoveries","Red.Cards","Saves","Shooting.Accuracy.prc","Shots","Shots.On.Target","Successful.Challenges","Sweeper.Clearances", "Tackle.Success.prc","Tackles","Team.Play","Through.Balls","Throw.Outs","Wins","Yellow.Cards")
+
+colnames(Stats2_clean) <- c("League","Team","Season","KEY","Player","Position","Appearences","Goals","Started","Started.As.A.Sub","Came.On","Taken.Off","Own.Goals","Type.Of.Goal","First.Half","Second.Half","First.Scorer","Last.Scorer","Home","Away","Right.Foot","Left.Foot","Header","Other.Method","Open.Play","Cross","Free.Kick", "Direct.Free.Kick","Throw.In", "Penalty","Corner","Other.Type.Of.Play","Minutes.played","Min.goal","Assists", "Prc.Assists","Leading.Recipient","Recipient.Goals","CS","Prc.Clean.Sheets","Hat.Tricks","Yellow.Cards","Yellow.First.Half","Yellow.Second.Half","Yellow.Home","Yellow.Away","Yellow.Minutes.Played","Minutes.per.Yellow.Cards","Sent.Off","Straight.Red.Card","Two.Yellow.Cards","Red.First.Half","Red.Second.Half","Red.Home","Red.Away","Red.Minutes.Played","Minutes.per.Red.Cards")
+
+Stats2_clean$Yellow.Cards <- as.integer(Stats2_clean$Yellow.Cards)
+
+
+
+
+
+
+
+
+#plotting the worst goal keepers
+
+gks_scored <- gks_scored %>% 
+  filter(ovr_score!=0.0) %>% 
+  arrange(ovr_score)
+
+bottom_10_gks <- head(gks_scored[order(gks_scored$ovr_score),],n=10)
+
+
+bot_gk_plt <- bottom_10_gks %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Bottom 10 Goalkeepers of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+bot_gk_plt + theme(axis.text.x = element_blank(),
+                   axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+
+#plotting the worst defenders
+
+def_scored <- def_scored %>% 
+  filter(ovr_score!=0.0) %>% 
+  arrange(ovr_score)
+
+bot_10_def <- head(def_scored[order(def_scored$ovr_score),],n=10)
+
+bot_def_plt <- bot_10_def %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Bottom 10 Defenders of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+bot_def_plt + theme(axis.text.x = element_blank(),
+                    axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+
+#plotting the worst midfielders
+mid_scored <- mid_scored %>% 
+  filter(ovr_score!=0.0) %>% 
+  arrange(ovr_score)
+
+bot_10_mid <- head(mid_scored[order(mid_scored$ovr_score),],n=10)
+
+bot_mid_plt <- bot_10_mid %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Bottom 10 Midfielders of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+bot_mid_plt + theme(axis.text.x = element_blank(),
+                    axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+#plotting the worst forward players
+att_scored <- att_scored %>% 
+  filter(ovr_score!=0.0) %>% 
+  arrange(ovr_score)
+
+bot_10_att <- head(att_scored[order(att_scored$ovr_score),],n=10)
+
+bot_att_plt <- bot_10_att %>%
+  ggplot(aes(x=Player.Name, y=ovr_score))+ geom_point(aes(color=Player.Name))+
+  scale_x_discrete(guide = guide_axis(n.dodge=3))+
+  labs(title="Bottom 10 Forwards of 2017/18") +
+  geom_text(aes(label=Player.Name),size=3) 
+
+bot_att_plt + theme(axis.text.x = element_blank(),
+                    axis.ticks.x = element_blank()) +
+  ylab("Overall Score") + xlab("Player Name")
+
+#regression plots
+ggp<-ggplot(goalkeeper_df,aes(Goals.Conceded,Saves))+
+  geom_point()
+ggp+
+  geom_smooth(method="lm",
+              formula = y~x)
+
+model <- lm(Goals ~ Appearences, data=Stats2_clean)
+new <- data.frame(Appearences=c(50))
+predict(model, newdata = new)
